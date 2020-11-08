@@ -4,10 +4,12 @@ export interface IKey extends Document {
   name: string;
   translatedInTo: ITranslatedInTo[];
 }
-interface ITranslatedInTo {
+export interface ITranslatedInTo {
   lang: string;
+  translate: string;
+  truthful: boolean;
   translator: {
     name: string;
-    id: number;
+    role: string;
   };
 }

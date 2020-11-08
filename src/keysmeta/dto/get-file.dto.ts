@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty } from 'class-validator';
 import { extensionEnum } from '../enums/extensions.enum';
 
-export class BuildKeysDto {
+export class GetFileDto {
   @IsNotEmpty()
   @ApiProperty({
     description: 'Name of project',
@@ -11,7 +11,13 @@ export class BuildKeysDto {
 
   @IsNotEmpty()
   @ApiProperty({
-    description: `Supports only ${Object.keys(extensionEnum)}`,
+    description: 'Language which one you need',
   })
-  extension: string;
+  lang: string;
+
+  @IsNotEmpty()
+  @ApiProperty({
+    description: 'extension of building file ',
+  })
+  extension: extensionEnum;
 }

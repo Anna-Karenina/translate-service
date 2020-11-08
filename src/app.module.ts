@@ -15,6 +15,7 @@ import { FileModule } from './file/file.module';
     MongooseModule.forRoot(process.env.MONGO_WRITE_CONNECTION, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
+      useFindAndModify: false,
     }),
     KeysmetaModule,
     LocalesModule,

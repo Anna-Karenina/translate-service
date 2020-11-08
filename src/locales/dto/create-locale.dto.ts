@@ -19,4 +19,9 @@ export class CreateLocaleDto {
     description: 'Name of projects',
   })
   project: string;
+
+  @ApiProperty({
+    description: 'send "true" if this is truthful dictionary',
+  })
+  truthful?: boolean;
 }

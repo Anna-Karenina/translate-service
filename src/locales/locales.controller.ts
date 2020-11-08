@@ -23,15 +23,14 @@ export class LocalesController {
   async create(
     @Body(ValidationPipe) createLocaleDto: CreateLocaleDto,
   ): Promise<ILocale> {
-    console.log('here');
-    return this.localesService.create(createLocaleDto);
+    return this.localesService.create(createLocaleDto); // TODO: выкинуть ошибку если не существует кейсМета в бд
   }
 
-  @Get('/localeslist')
+  @Get('/get-list')
   async getLocaleList(): Promise<ILocale[]> {
     return this.localesService.getAll();
   }
-  @Get('/locale')
+  @Get('/get-by-name')
   async getLocaleByName(
     @Query(ValidationPipe) query: GetLocaleDto,
   ): Promise<ILocale> {
@@ -39,7 +38,7 @@ export class LocalesController {
     // обработать ошибки
   }
 
-  @Delete('/delete')
+  @Delete('/deete')
   async deleteLocale(
     @Query(ValidationPipe) query: DeleteLocaleDto,
   ): Promise<boolean> {
