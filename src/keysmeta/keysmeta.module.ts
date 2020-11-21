@@ -6,13 +6,16 @@ import { LocalesModule } from 'src/locales/locales.module';
 
 import { KeysmetaController } from './keysmeta.controller';
 import { KeysmetaService } from './keysmeta.service';
-import { KeySchema, KeysMetaShema } from './schema/keysmeta.schema';
+import { KeySchema } from './schema/key.schema';
+import { KeysMetaShema } from './schema/keysmeta.schema';
+import { ProjectSchema } from './schema/project.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: 'KeysMeta', schema: KeysMetaShema },
       { name: 'Key', schema: KeySchema },
+      { name: 'Project', schema: ProjectSchema },
     ]),
     HttpModule.registerAsync({
       useFactory: () => ({

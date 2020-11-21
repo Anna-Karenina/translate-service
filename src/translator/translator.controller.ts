@@ -18,15 +18,15 @@ import { TranslatorService } from './translator.service';
 export class TranslatorController {
   constructor(private readonly translatorService: TranslatorService) {}
 
-  @Post('get-list')
-  async getAllTranslatedRows(
-    @Body(ValidationPipe) translateAllKeys: TranslateAllKeys,
-  ): Promise<string> {
-    const translatedRows = await this.translatorService.getAllRows(
-      translateAllKeys,
-    );
-    return JSON.stringify(translatedRows);
-  }
+  // @Post('get-list')
+  // async getAllTranslatedRows(
+  //   @Body(ValidationPipe) translateAllKeys: TranslateAllKeys,
+  // ): Promise<string> {
+  //   const translatedRows = await this.translatorService.getAllRows(
+  //     translateAllKeys,
+  //   );
+  //   return JSON.stringify(translatedRows);
+  // }
 
   @Get('get-by-id')
   async getTranslateById(

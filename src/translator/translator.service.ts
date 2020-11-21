@@ -32,33 +32,36 @@ export class TranslatorService {
     return parsedFile;
   }
 
-  async getAllRows(translateAllKeys: TranslateAllKeys): Promise<any> {
-    const { lang, project } = translateAllKeys;
-    const keysMeta = await this.keysMeta.getKeysMeta({ project });
-    const keysMetaObject: IKeysMeta = keysMeta.toObject(); //mongoose возвращает монгус документ
-    const onlyKeysFromBd = this.buildJsonFromFile(lang, project);
+  // async getAllRows(translateAllKeys: TranslateAllKeys): Promise<any> {
+  //   const { lang, project } = translateAllKeys;
+  //   // const keysMeta = await this.keysMeta.getKeysMeta({ project });
+  //   const keysMetaObject: IKeysMeta = keysMeta.toObject(); //mongoose возвращает монгус документ
+  //   const onlyKeysFromBd = this.buildJsonFromFile(lang, project);
 
-    return {
-      ...keysMetaObject,
-      keys: keysMetaObject.keys.reduce((acc, key) => {
-        const newTr = key.translatedInTo.map(tr =>
-          tr.lang === lang
-            ? { ...tr, translate: onlyKeysFromBd[key.name] }
-            : tr,
-        );
-        //@ts-ignore
-        key = { ...key, translatedInTo: newTr };
-        return [...acc, key];
-      }, []),
-    };
-  }
+  //   return {
+  //     ...keysMetaObject,
+  //     keys: keysMetaObject.keys.reduce((acc, key) => {
+  //       //@ts-ignore
+  //       const newTr = key.translatedInTo.map(tr =>
+  //         tr.lang === lang
+  //           ? { ...tr, translate: onlyKeysFromBd[key.name] }
+  //           : tr,
+  //       );
+  //       //@ts-ignore
+  //       key = { ...key, translatedInTo: newTr };
+  //       return [...acc, key];
+  //     }, []),
+  //   };
+  // }
 
   async getTranslateById(query: GetTranslatedRowByIdDto): Promise<IKey> {
     const { Id, lang } = query;
     const key = await this.keysMeta.getKeyByid(Id);
     if (!lang) {
+      //@ts-ignore
       return key;
     } else {
+      //@ts-ignore
       const keyFilteredByLang = key.translatedInTo.map(tr =>
         tr.lang === lang ? tr : null,
       );
@@ -112,6 +115,7 @@ export class TranslatorService {
     const {
       lang: truthfullang,
       translate: truthfultranslate,
+      //@ts-ignore
     } = key.translatedInTo.find(k => k.truthful === true);
 
     const payload = {
@@ -125,7 +129,7 @@ export class TranslatorService {
       name: url,
       role: 'machine',
     };
-
+    //@ts-ignore
     const updatedTranslatedInTo = key.translatedInTo.map(k => {
       if (k.lang === lang) {
         return {
@@ -137,7 +141,7 @@ export class TranslatorService {
     });
 
     const newKey: any = { ...key, translatedInTo: updatedTranslatedInTo };
-    this.keysMeta.updateKeyById(newKey, project);
+    // this.keysMeta.updateKeyById(newKey, project);
     return;
   }
 }

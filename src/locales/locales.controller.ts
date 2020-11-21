@@ -19,12 +19,12 @@ import { LocalesService } from './locales.service';
 export class LocalesController {
   constructor(private readonly localesService: LocalesService) {}
 
-  @Post('/create')
-  async create(
-    @Body(ValidationPipe) createLocaleDto: CreateLocaleDto,
-  ): Promise<ILocale> {
-    return this.localesService.create(createLocaleDto); // TODO: выкинуть ошибку если не существует кейсМета в бд
-  }
+  // @Post('/create')
+  // async create(
+  //   @Body(ValidationPipe) createLocaleDto: CreateLocaleDto,
+  // ): Promise<ILocale> {
+  //   return this.localesService.create(createLocaleDto); // TODO: выкинуть ошибку если не существует кейсМета в бд
+  // }
 
   @Get('/get-list')
   async getLocaleList(): Promise<ILocale[]> {

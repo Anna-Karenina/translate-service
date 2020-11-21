@@ -6,9 +6,11 @@ export class GetTranslatedRowByIdDto {
   @ApiProperty()
   Id: string;
 
+  @IsNotEmpty()
   @ApiProperty()
   lang: string;
 
+  @IsNotEmpty()
   @ApiProperty()
   project?: string;
 }
