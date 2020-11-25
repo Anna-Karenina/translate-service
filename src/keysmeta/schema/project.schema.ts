@@ -14,6 +14,7 @@ export const ProjectSchema = new mongoose.Schema(
           required: true,
         },
         linkToRepo: { type: String, required: true },
+        truthfulLocale: { type: String, required: true },
         keysMetaId: { type: String },
         fileExtension: {
           type: String,

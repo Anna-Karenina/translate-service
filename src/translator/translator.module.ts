@@ -4,6 +4,8 @@ import { TranslatorController } from './translator.controller';
 import { KeysmetaModule } from 'src/keysmeta/keysmeta.module';
 import { FileModule } from 'src/file/file.module';
 import { LocalesModule } from 'src/locales/locales.module';
+import { MongooseModule } from '@nestjs/mongoose';
+import { KeySchema } from 'src/keysmeta/schema/key.schema';
 
 @Module({
   imports: [
@@ -13,6 +15,7 @@ import { LocalesModule } from 'src/locales/locales.module';
         maxRedirects: 5,
       }),
     }),
+    MongooseModule.forFeature([{ name: 'Key', schema: KeySchema }]),
     KeysmetaModule,
     FileModule,
     LocalesModule,

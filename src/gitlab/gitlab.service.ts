@@ -1,6 +1,7 @@
 import { HttpService, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { map } from 'rxjs/operators';
+import { BuildKeysDto } from 'src/keysmeta/dto/keysmeta.dto';
 
 @Injectable()
 export class GitlabService {
@@ -9,9 +10,10 @@ export class GitlabService {
     private readonly configService: ConfigService,
   ) {}
 
-  async getMainLocaleFileFromGitLab(): Promise<any> {
+  async getMainLocaleFileFromGitLab({ linkToRepo }): Promise<any> {
     const token = this.configService.get<string>('GIT_LAB_TOKEN');
-    const url = this.configService.get<string>('GIT_URL');
+    // const url = this.configService.get<string>('GIT_URL');
+    const url = linkToRepo;
     const headersRequest = {
       'PRIVATE-TOKEN': token,
     };

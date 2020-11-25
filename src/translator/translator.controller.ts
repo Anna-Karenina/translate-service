@@ -34,12 +34,13 @@ export class TranslatorController {
   ): Promise<IKey> {
     return this.translatorService.getTranslateById(query);
   }
-  // @Post('tanslate-keys')
-  // async translateAllKeys(
-  //   @Body(ValidationPipe) translateAllKeys: TranslateAllKeys,
-  // ): Promise<any> {
-  //   return this.translatorService.translateAllKeys(translateAllKeys);
-  // }
+  @Post('tanslate-all-keys')
+  async translateAllKeys(
+    @Body(ValidationPipe) translateAllKeys: TranslateAllKeys,
+  ): Promise<any> {
+    return this.translatorService.tryTranslateAllKeys(translateAllKeys);
+  }
+
   @Post('transate-by-id')
   async translateKey(
     @Body(ValidationPipe) translatedRowById: GetTranslatedRowByIdDto,

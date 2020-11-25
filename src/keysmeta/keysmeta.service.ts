@@ -1,11 +1,15 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { difference } from 'lodash';
 import { Model } from 'mongoose';
+import { FileService } from 'src/file/file.service';
 import { GitlabService } from 'src/gitlab/gitlab.service';
 import { INotifications } from 'src/global-interfaces/notifications.interface';
+import { LocalesService } from 'src/locales/locales.service';
 import { GetKeysDto } from './dto/get-keys.dto';
 import { BuildKeysDto } from './dto/keysmeta.dto';
+import { UpdateKeysDto } from './dto/update-keys.dto';
 import { IKey } from './interfaces/key.interfaces';
 import { IKeysMeta } from './interfaces/keysmeta.interface';
 import { IProject, IProjectConsumer } from './interfaces/project.interface';
@@ -16,6 +20,8 @@ export class KeysmetaService {
     @InjectModel('KeysMeta')
     private readonly keysMetaModel: Model<IKeysMeta>,
     private readonly gitLabService: GitlabService,
+    private readonly fileService: FileService,
+    private readonly localeService: LocalesService,
     @InjectModel('Key')
     private readonly key: Model<IKey>,
     @InjectModel('Project')
@@ -23,19 +29,68 @@ export class KeysmetaService {
   ) {}
 
   realiseEval = (jsString: string, lang: string) => {
-    const code = jsString.replace(`export const ${lang} = `, '');
-    const str = `(function (){
-      return ${code} })()`;
-    return eval(str);
+    try {
+      const code = jsString.replace(`export const ${lang} = `, '');
+      const str = `(function (){
+        return ${code} })()`;
+      return eval(str);
+    } catch (error) {}
   };
 
-  async checkIsProjectExist(buildKeysDto: BuildKeysDto): Promise<IProject> {
-    const { project, consumer, linkToRepo, extension } = buildKeysDto;
+  async checkProjectExist({ project, consumer }): Promise<boolean> {
+    if (!consumer) {
+      return await this.projectModel.exists({ projectName: project });
+    }
+
+    const curentProjects = await this.projectModel
+      .find({ projectName: project })
+      .exec();
+
+    const search = [];
+    curentProjects.forEach(cp => {
+      cp.consumers.forEach(con => {
+        if (con.consumerType === consumer) return search.push(true);
+        return search.push(false);
+      });
+    });
+    return search.some(s => s === true);
+  }
+
+  async getFilledProject({ project, consumer }): Promise<IProject[]> {
+    const curentProjects = await this.projectModel
+      .find({
+        projectName: project,
+      })
+      .exec();
+    if (!consumer) return curentProjects;
+
+    const filtered = [];
+    curentProjects.forEach((cp: IProject) => {
+      const findedConsumers = cp.consumers.find(
+        c => c.consumerType === consumer,
+      );
+      if (!findedConsumers) return;
+      //@ts-ignores
+      const filteredConsumers = { ...cp._doc, consumers: [findedConsumers] };
+      filtered.push(filteredConsumers);
+    });
+    return filtered;
+  }
+
+  async findOrCreateProject(buildKeysDto: BuildKeysDto): Promise<IProject> {
+    const {
+      project,
+      consumer,
+      linkToRepo,
+      extension,
+      langInRepo,
+    } = buildKeysDto;
     let checkedProject: IProject;
-    const IsProjectExist = await this.projectModel.findOne(
+    const curProject = await this.projectModel.findOne(
       { projectName: project },
       async (error, project) => {
         if (error) return false;
+        if (!project) return false;
         const existConsumer = project.consumers.find(
           (c: IProjectConsumer) => c.consumerType === consumer,
         );
@@ -45,6 +100,7 @@ export class KeysmetaService {
           const newConsumer = {
             consumerType: consumer,
             fileExtension: extension,
+            truthfulLocale: langInRepo,
             linkToRepo,
           };
           const newC = [...project.consumers, newConsumer];
@@ -54,9 +110,9 @@ export class KeysmetaService {
         }
       },
     );
-    if (IsProjectExist) {
+    if (curProject) {
       //check consumertype
-      checkedProject = IsProjectExist;
+      checkedProject = curProject;
     } else {
       checkedProject = await this.buildProject(buildKeysDto);
     }
@@ -64,13 +120,20 @@ export class KeysmetaService {
   }
 
   async buildProject(buildKeysDto: BuildKeysDto): Promise<IProject> {
-    const { project, consumer, extension, linkToRepo } = buildKeysDto;
+    const {
+      project,
+      consumer,
+      extension,
+      linkToRepo,
+      langInRepo,
+    } = buildKeysDto;
     const newProject = {
       projectName: project,
       consumers: [
         {
           consumerType: consumer,
           fileExtension: extension,
+          truthfulLocale: langInRepo,
           linkToRepo,
         },
       ],
@@ -82,16 +145,53 @@ export class KeysmetaService {
   async buildKeys(
     buildKeysDto: BuildKeysDto,
   ): Promise<IKeysMeta | INotifications> {
-    const filledProject = await this.checkIsProjectExist(buildKeysDto);
+    const filledProject = await this.findOrCreateProject(buildKeysDto);
 
-    const data: string = await this.gitLabService.getMainLocaleFileFromGitLab();
-    const parsedData = await this.realiseEval(data, 'ru');
+    const isLangExist = await this.localeService.checkLocaleExist(
+      buildKeysDto.langInRepo,
+    );
+
+    const lang = isLangExist
+      ? await this.localeService.getLocaleByName({
+          name: buildKeysDto.langInRepo,
+        })
+      : await this.localeService.createDefault({
+          name: buildKeysDto.langInRepo,
+          project: filledProject._id,
+          shortCut: '',
+          truthful: true,
+        });
+
+    const existLocales = await this.localeService
+      .getAll()
+      .then(locales => locales.filter(l => l.name !== buildKeysDto.langInRepo));
+    // TODO: надо обновить ключи п
+
+    const data: string = await this.gitLabService.getMainLocaleFileFromGitLab({
+      linkToRepo: buildKeysDto.linkToRepo,
+    });
+    const parsedData = await this.realiseEval(data, buildKeysDto.langInRepo);
+
+    await this.fileService.buildTruthLocaleFile({
+      extension: buildKeysDto.extension,
+      project: buildKeysDto.project,
+      dictionary: parsedData,
+      lang: buildKeysDto.langInRepo,
+    });
 
     const rowKeys = Object.keys(parsedData).reduce((acc, key: string):
       | IKeysMeta['keys']
       | [] => {
+      const translatePayload = {
+        lang: buildKeysDto.langInRepo,
+        translator: { name: 'default', role: 'truthful' },
+        translate: parsedData[key],
+        truthful: true,
+      };
+
       const a = {
         name: key,
+        translatedInTo: [translatePayload],
       };
       //@ts-ignore
       return [...acc, a];
@@ -109,6 +209,7 @@ export class KeysmetaService {
       keys: newKeys,
       length: newKeys.length,
       project: filledProject._id,
+      consumer: buildKeysDto.consumer,
     };
 
     const saveKeys = new this.keysMetaModel(newKeysMeta);
@@ -125,13 +226,14 @@ export class KeysmetaService {
         await p.save();
       },
     );
+
     return {
       status: 1,
       message: `Keys-Meta for project ${buildKeysDto.project} successed created`,
     };
   }
 
-  async getKeysMeta(
+  async getFilledKeysMeta(
     getKeysDto: GetKeysDto,
   ): Promise<IKeysMeta | INotifications> {
     const project = await this.projectModel
@@ -161,6 +263,33 @@ export class KeysmetaService {
     }
   }
 
+  async getKeysMeta(
+    getKeysDto: GetKeysDto,
+  ): Promise<IKeysMeta | INotifications> {
+    const project = await this.projectModel
+      .findOne({ projectName: getKeysDto.project })
+      .exec();
+
+    if (!project) {
+      return {
+        status: 0,
+        message: `Project ${getKeysDto.project}does not exist`,
+      };
+    }
+
+    const curConsumer = project.consumers.find(
+      (cons: IProjectConsumer) => cons.consumerType === getKeysDto.consumer,
+    );
+    if (!curConsumer) {
+      return {
+        status: 0,
+        message: `Consumer ${getKeysDto.consumer} does not exist in ${getKeysDto.project} project`,
+      };
+    } else {
+      return await this.keysMetaModel.findById(curConsumer.keysMetaId).exec();
+    }
+  }
+
   async getKeyByid(q): Promise<IKey | INotifications> {
     const key = await this.key.findById(q.Id).exec();
     if (!key) {
@@ -173,6 +302,118 @@ export class KeysmetaService {
     }
   }
 
+  async getProjecstWithConsumer(): Promise<IProject[] | IProject> {
+    return await this.projectModel.find({}).exec();
+  }
+
+  async updateKeys(
+    updateKeysDto: UpdateKeysDto,
+  ): Promise<INotifications | IProject> {
+    const { consumer, project, linkToRepo } = updateKeysDto;
+    const isProjectExist = await this.checkProjectExist({ consumer, project });
+    if (!isProjectExist)
+      return {
+        status: 0,
+        message: `Project '${project}' with consumer '${consumer}' does't exist`,
+      };
+
+    const curentProject = await this.getFilledProject({ consumer, project });
+    const {
+      linkToRepo: curentRepoLink,
+      truthfulLocale,
+      keysMetaId,
+    } = curentProject[0].consumers[0]; //Инфа сотка выше все проверки
+
+    const curentMetaKeys = await this.getKeysMeta({ consumer, project });
+
+    const data: string = await this.gitLabService.getMainLocaleFileFromGitLab({
+      linkToRepo: curentRepoLink,
+    });
+    const parsedData = await this.realiseEval(data, truthfulLocale);
+    const arrOfParsedDataKeys = Object.keys(parsedData);
+
+    //@ts-ignore
+    if (arrOfParsedDataKeys.length === curentMetaKeys.keys.length) {
+      return {
+        status: 0,
+        message: `Nothing to Update`,
+      };
+    }
+
+    //@ts-ignore
+    const flatenCurrentMetaKeys = curentMetaKeys.keys.reduce((acc, key) => {
+      return [...acc, key.name];
+    }, []);
+
+    const differenceInKeys = difference(
+      arrOfParsedDataKeys,
+      flatenCurrentMetaKeys,
+    );
+
+    const newKeys = differenceInKeys.reduce((acc, key: string) => {
+      const newKey = {
+        name: key,
+        translatedInTo: [
+          {
+            lang: truthfulLocale,
+            translator: { name: 'default', role: 'truthful' },
+            translate: parsedData[key],
+            truthful: true,
+          },
+        ],
+      };
+      return [...acc, newKey];
+    }, []);
+
+    let savedKeys = [];
+    const savedKeysIds = [];
+    await this.key.insertMany(newKeys).then(keys => {
+      keys.map(k => {
+        savedKeysIds.push(k._id);
+        savedKeys = [...savedKeys, { key: k._id, name: k.name }];
+      });
+    });
+
+    const existLocales = await this.localeService
+      .getAll()
+      .then(locales => locales.filter(l => l.name !== truthfulLocale));
+
+    (async () => {
+      for (const el of existLocales) {
+        await this.localeService.updateProjectKeys({
+          name: el.name,
+          ids: savedKeysIds,
+        });
+      }
+    })();
+
+    const processArray = async array => {
+      for (const item of array) {
+        try {
+          await this.keysMetaModel.findByIdAndUpdate(
+            { _id: keysMetaId },
+            {
+              $addToSet: {
+                keys: item,
+              },
+              $set: {
+                keysQuantity: flatenCurrentMetaKeys.length,
+              },
+            },
+          );
+        } catch (error) {
+          console.log(error);
+        }
+      }
+    };
+    await processArray(savedKeys);
+
+    return {
+      status: 1,
+      message: `For project '${project}' with consumer '${consumer}' check difference and that ${differenceInKeys.length} keys we add it into bd`,
+      aditionalField: { keys: differenceInKeys, savedKeys: savedKeys },
+    };
+  }
   // async updateKeyById(newKey: IKey, project: string): Promise<IKey> {
   //   let newKeys = [];
   //   const mongoKeys = await this.keysMetaModel.findOne({ project }).exec();

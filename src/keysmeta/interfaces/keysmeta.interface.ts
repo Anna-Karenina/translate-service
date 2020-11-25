@@ -1,10 +1,12 @@
 import { Document } from 'mongoose';
+import { consumersEnum } from '../enums/consumers.enum';
 import { IProject } from './project.interface';
 
 export interface IKeysMeta extends Document {
   keys: [IKeyMeta];
-  length: number;
+  keysQuantity: number;
   project: IProject;
+  consumer?: consumersEnum;
 }
 
 export interface IKeyMeta extends Document {

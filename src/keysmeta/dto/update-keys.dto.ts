@@ -1,20 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty } from 'class-validator';
 import { consumersEnum } from '../enums/consumers.enum';
-import { extensionEnum } from '../enums/extensions.enum';
 
-export class BuildKeysDto {
+export class UpdateKeysDto {
   @IsNotEmpty()
   @ApiProperty({
     description: 'Name of project',
   })
   project: string;
-
-  @IsNotEmpty()
-  @ApiProperty({
-    description: `Supports only ${Object.keys(extensionEnum)}`,
-  })
-  extension: extensionEnum;
 
   @IsNotEmpty()
   @ApiProperty({
@@ -28,16 +21,5 @@ export class BuildKeysDto {
   @ApiProperty({
     description: 'link to file in gitlab',
   })
-  linkToRepo: string;
-
-  @ApiProperty({
-    description: 'lang witch be used as default and truth dictionary',
-  })
-  langInRepo: string;
-
-  // @IsNotEmpty()
-  // @ApiProperty({
-  //   description: 'token to file in gitlab',
-  // })
-  // tokenToRepo: string;
+  linkToRepo?: string;
 }

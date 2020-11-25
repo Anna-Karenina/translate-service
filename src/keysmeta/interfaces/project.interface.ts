@@ -13,4 +13,5 @@ export interface IProjectConsumer extends Document {
   fileExtension: extensionEnum;
   linkToRepo: string;
   keysMetaId: string;
+  truthfulLocale: string;
 }

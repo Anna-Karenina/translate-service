@@ -22,14 +22,6 @@ export class FileService {
     private readonly configService: ConfigService, // private readonly keysmetaService: KeysmetaService,
   ) {}
 
-  // private async getKeysMeta(getKeysDto: GetKeysDto): Promise<IKeysMeta> {
-  //   const keys = await this.keysMetaModel
-  //     .findOne(getKeysDto)
-  //     .populate('keys')
-  //     .exec();
-  //   return keys;
-  // }
-
   private realiseEval = (jsString: string, lang: string) => {
     const code = jsString.replace(`export const ${lang} = `, '');
     const str = `(function (){
@@ -53,11 +45,8 @@ export class FileService {
     return projectFolder ? projectFolder : filefolder;
   }
 
-  async buildTruthLocaleFile({ lang, extension, project }) {
+  async buildTruthLocaleFile({ dictionary, lang, extension, project }) {
     const path = this.checkСonditions(project);
-
-    const data = await this.gitLabService.getMainLocaleFileFromGitLab();
-    const dictionary = this.realiseEval(data, lang);
     const writeble = createWriteStream(resolve(path, `${lang}.${extension}`));
     writeble.write(`export const ${lang} = {\n`);
     Object.keys(dictionary).forEach(d => {
@@ -80,7 +69,7 @@ export class FileService {
   //   const { name, project } = createLocaleDto;
   //   const path = this.checkСonditions(project);
   //   const writeble = createWriteStream(resolve(path, `${name}.${extension}`));
-  //   const k = await this.getKeysMeta({ project });
+  //   const k = await this.getFilledKeysMeta({ project });
   //   if (k === null) {
   //     throw new Error('error passably project null');
   //   }

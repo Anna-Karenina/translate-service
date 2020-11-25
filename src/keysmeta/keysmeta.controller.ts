@@ -18,6 +18,8 @@ import { IKeysMeta } from './interfaces/keysmeta.interface';
 import { KeysmetaService } from './keysmeta.service';
 import { query, Response } from 'express';
 import { IKey } from './interfaces/key.interfaces';
+import { IProject } from './interfaces/project.interface';
+import { UpdateKeysDto } from './dto/update-keys.dto';
 
 @ApiTags('KeysMeta')
 @Controller('keysmeta')
@@ -34,11 +36,25 @@ export class KeysmetaController {
     return await this.keysService.buildKeys(buildKeysDto);
   }
 
+  @Post('/update-keys')
+  async updateKeys(
+    @Body(ValidationPipe) updateKeysDto: UpdateKeysDto,
+  ): Promise<any> {
+    return await this.keysService.updateKeys(updateKeysDto);
+  }
+
+  @Get('/project-with-consumer')
+  async getProjectWConsumer(): Promise<IProject | INotifications> {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    //@ts-ignore
+    return await this.keysService.getProjecstWithConsumer();
+  }
+
   @Get('/get-keys')
   async getKeys(
     @Query(ValidationPipe) getKeysDto: GetKeysDto,
   ): Promise<IKeysMeta | INotifications> {
-    return await this.keysService.getKeysMeta(getKeysDto);
+    return await this.keysService.getFilledKeysMeta(getKeysDto);
   }
 
   @Get('/get-key-by-id')
@@ -47,6 +63,7 @@ export class KeysmetaController {
   ): Promise<IKey | INotifications> {
     return await this.keysService.getKeyByid(query);
   }
+
   // @Get('get-translated-file')
   // async getFile(
   //   @Query(ValidationPipe) getFileDto: GetFileDto,

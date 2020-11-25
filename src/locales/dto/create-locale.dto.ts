@@ -16,7 +16,7 @@ export class CreateLocaleDto {
 
   @IsNotEmpty()
   @ApiProperty({
-    description: 'Name of projects',
+    description: 'Id of project',
   })
   project: string;
 

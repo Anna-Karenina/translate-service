@@ -8,6 +8,7 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { INotifications } from 'src/global-interfaces/notifications.interface';
 import { CreateLocaleDto } from './dto/create-locale.dto';
 import { DeleteLocaleDto } from './dto/delete-locale.dto';
 import { GetLocaleDto } from './dto/get-locale-by-name.dto';
@@ -19,12 +20,12 @@ import { LocalesService } from './locales.service';
 export class LocalesController {
   constructor(private readonly localesService: LocalesService) {}
 
-  // @Post('/create')
-  // async create(
-  //   @Body(ValidationPipe) createLocaleDto: CreateLocaleDto,
-  // ): Promise<ILocale> {
-  //   return this.localesService.create(createLocaleDto); // TODO: выкинуть ошибку если не существует кейсМета в бд
-  // }
+  @Post('/create')
+  async create(
+    @Body(ValidationPipe) createLocaleDto: CreateLocaleDto,
+  ): Promise<ILocale | INotifications> {
+    return this.localesService.create(createLocaleDto); // TODO: выкинуть ошибку если не существует кейсМета в бд
+  }
 
   @Get('/get-list')
   async getLocaleList(): Promise<ILocale[]> {
@@ -38,7 +39,7 @@ export class LocalesController {
     // обработать ошибки
   }
 
-  @Delete('/deete')
+  @Delete('/delete')
   async deleteLocale(
     @Query(ValidationPipe) query: DeleteLocaleDto,
   ): Promise<boolean> {

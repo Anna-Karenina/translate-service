@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose/dist';
 import { FileModule } from 'src/file/file.module';
 import { FileService } from 'src/file/file.service';
 import { GitlabModule } from 'src/gitlab/gitlab.module';
+import { KeySchema } from 'src/keysmeta/schema/key.schema';
 import { KeysMetaShema } from 'src/keysmeta/schema/keysmeta.schema';
 import { ProjectSchema } from 'src/keysmeta/schema/project.schema';
 
@@ -16,6 +17,7 @@ import { LocaleSchema } from './schema/locale.schema';
       { name: 'Locale', schema: LocaleSchema },
       { name: 'KeysMeta', schema: KeysMetaShema },
       { name: 'Project', schema: ProjectSchema },
+      { name: 'Key', schema: KeySchema },
     ]),
     FileModule,
     GitlabModule,

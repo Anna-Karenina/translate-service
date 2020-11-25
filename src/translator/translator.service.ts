@@ -13,10 +13,13 @@ import { INotifications } from 'src/global-interfaces/notifications.interface';
 import { LocalesService } from 'src/locales/locales.service';
 import { ConfigService } from '@nestjs/config';
 import { map } from 'rxjs/operators';
+import { Model } from 'mongoose';
+import { InjectModel } from '@nestjs/mongoose';
 
 @Injectable()
 export class TranslatorService {
   constructor(
+    @InjectModel('Key') private readonly keyModel: Model<IKey>,
     private readonly fileService: FileService,
     private httpService: HttpService,
     private readonly configService: ConfigService,
@@ -32,27 +35,30 @@ export class TranslatorService {
     return parsedFile;
   }
 
-  // async getAllRows(translateAllKeys: TranslateAllKeys): Promise<any> {
-  //   const { lang, project } = translateAllKeys;
-  //   // const keysMeta = await this.keysMeta.getKeysMeta({ project });
-  //   const keysMetaObject: IKeysMeta = keysMeta.toObject(); //mongoose возвращает монгус документ
-  //   const onlyKeysFromBd = this.buildJsonFromFile(lang, project);
+  async tryTranslateAllKeys(translateAllKeys: TranslateAllKeys) {
+    const curKeysMeta = await this.keysMeta.getKeysMeta({
+      project: translateAllKeys.project,
+      consumer: translateAllKeys.consumer,
+    });
+    //@ts-ignore
+    const arrOfKeysIds = curKeysMeta.keys.reduce((acc, key) => {
+      return [...acc, key.key];
+    }, []);
 
-  //   return {
-  //     ...keysMetaObject,
-  //     keys: keysMetaObject.keys.reduce((acc, key) => {
-  //       //@ts-ignore
-  //       const newTr = key.translatedInTo.map(tr =>
-  //         tr.lang === lang
-  //           ? { ...tr, translate: onlyKeysFromBd[key.name] }
-  //           : tr,
-  //       );
-  //       //@ts-ignore
-  //       key = { ...key, translatedInTo: newTr };
-  //       return [...acc, key];
-  //     }, []),
-  //   };
-  // }
+    const processArray = async array => {
+      for (const item of array) {
+        await this.translateKeyById({
+          Id: item,
+          project: translateAllKeys.project,
+          lang: translateAllKeys.lang,
+        });
+      }
+      console.log('Done!');
+    };
+    processArray(arrOfKeysIds);
+
+    return arrOfKeysIds;
+  }
 
   async getTranslateById(query: GetTranslatedRowByIdDto): Promise<IKey> {
     const { Id, lang } = query;
@@ -101,22 +107,23 @@ export class TranslatorService {
 
   async translateKeyById(
     translatedRowById: GetTranslatedRowByIdDto,
-  ): Promise<IKey | INotifications> {
-    const { Id, lang, project } = translatedRowById;
+  ): Promise<IKey | INotifications | any> {
+    const { Id, lang } = translatedRowById;
     const url = this.configService.get<string>('TRANSLATE_SERVICE');
-
     const isLangExist = await this.localesService.checkLocaleExist(lang);
     if (!isLangExist) {
       return { status: 0, message: `that locales doest exist` };
     }
-    const key = await this.keysMeta.getKeyByid(Id);
-    if (!key) return { status: 0, message: `key with ID: ${Id} not founded` };
+
+    const curKey = await this.keyModel
+      .findById(Id)
+      .lean()
+      .exec();
 
     const {
       lang: truthfullang,
       translate: truthfultranslate,
-      //@ts-ignore
-    } = key.translatedInTo.find(k => k.truthful === true);
+    } = curKey.translatedInTo.find(k => k.truthful === true);
 
     const payload = {
       from: truthfullang,
@@ -129,19 +136,17 @@ export class TranslatorService {
       name: url,
       role: 'machine',
     };
-    //@ts-ignore
-    const updatedTranslatedInTo = key.translatedInTo.map(k => {
+
+    const arr = curKey.translatedInTo.map(k => {
       if (k.lang === lang) {
-        return {
-          ...k,
-          translator,
-          translate: translate,
-        };
-      } else return k;
+        return { ...k, translator, translate };
+      }
+      return k;
     });
 
-    const newKey: any = { ...key, translatedInTo: updatedTranslatedInTo };
-    // this.keysMeta.updateKeyById(newKey, project);
-    return;
+    const keyWithNewTranslate = await this.keyModel.findByIdAndUpdate(Id, {
+      $set: { translatedInTo: arr },
+    });
+    return keyWithNewTranslate;
   }
 }
