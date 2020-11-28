@@ -29,6 +29,7 @@ export class LocalesService {
     ids = [],
     truthful = false,
   }): Promise<INotifications | boolean> {
+    console.log(name, ids);
     const emptyTranslatedInToField = {
       lang: name,
       translator: { name: 'default', role: 'locale create' },

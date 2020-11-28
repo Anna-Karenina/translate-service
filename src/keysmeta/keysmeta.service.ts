@@ -7,10 +7,11 @@ import { FileService } from 'src/file/file.service';
 import { GitlabService } from 'src/gitlab/gitlab.service';
 import { INotifications } from 'src/global-interfaces/notifications.interface';
 import { LocalesService } from 'src/locales/locales.service';
+import { UpdateKeyDto } from './dto/add-key.dto';
 import { GetKeysDto } from './dto/get-keys.dto';
 import { BuildKeysDto } from './dto/keysmeta.dto';
 import { UpdateKeysDto } from './dto/update-keys.dto';
-import { IKey } from './interfaces/key.interfaces';
+import { IKey, ITranslatedInTo } from './interfaces/key.interfaces';
 import { IKeysMeta } from './interfaces/keysmeta.interface';
 import { IProject, IProjectConsumer } from './interfaces/project.interface';
 
@@ -302,13 +303,18 @@ export class KeysmetaService {
     }
   }
 
-  async getProjecstWithConsumer(): Promise<IProject[] | IProject> {
-    return await this.projectModel.find({}).exec();
+  async getProjecstWithConsumer(): Promise<IProject[] | INotifications> {
+    const arrOfProjects = await this.projectModel.find({}).exec();
+    if (!arrOfProjects) {
+      return {
+        status: 0,
+        message: 'Project list empty',
+      };
+    } else return arrOfProjects;
+    //TODO:
   }
 
-  async updateKeys(
-    updateKeysDto: UpdateKeysDto,
-  ): Promise<INotifications | IProject> {
+  async updateKeys(updateKeysDto: UpdateKeysDto): Promise<INotifications> {
     const { consumer, project, linkToRepo } = updateKeysDto;
     const isProjectExist = await this.checkProjectExist({ consumer, project });
     if (!isProjectExist)
@@ -408,30 +414,57 @@ export class KeysmetaService {
     };
     await processArray(savedKeys);
 
-    return {
+    const notice: INotifications = {
       status: 1,
       message: `For project '${project}' with consumer '${consumer}' check difference and that ${differenceInKeys.length} keys we add it into bd`,
       aditionalField: { keys: differenceInKeys, savedKeys: savedKeys },
     };
+    return notice;
   }
-  // async updateKeyById(newKey: IKey, project: string): Promise<IKey> {
-  //   let newKeys = [];
-  //   const mongoKeys = await this.keysMetaModel.findOne({ project }).exec();
-  //   newKeys = mongoKeys.keys.reduce((acc, key) => {
-  //     const oldKeyId = key._id.toString();
-  //     const newKeyId = newKey._id.toString();
-  //     return newKeyId === oldKeyId ? [...acc, { ...newKey }] : [...acc, key];
-  //   }, []);
 
-  //   await this.keysMetaModel.findOneAndUpdate(
-  //     { project },
-  //     //@ts-ignore
-  //     { $set: { keys: newKeys } },
-  //     { new: true },
-  //     err => {
-  //       console.log(err);
-  //     },
-  //   );
-  //   return newKey;
-  // }
+  async updateOrCreateKey(updateKeyDto: UpdateKeyDto): Promise<any> {
+    const {
+      keyName,
+      truthfulLocaleTranslate,
+      consumer,
+      project,
+      ID,
+    } = updateKeyDto;
+
+    const curentProject = await this.getFilledProject({ consumer, project });
+    const truthfulLocale = curentProject[0].consumers[0].truthfulLocale;
+
+    const translatePayload: ITranslatedInTo = {
+      lang: truthfulLocale,
+      translator: { name: 'default', role: 'truthful' },
+      translate: truthfulLocaleTranslate,
+      truthful: true,
+    };
+
+    const options = { upsert: true, new: true, setDefaultsOnInsert: true };
+    const q = ID ? { _id: ID } : { name: keyName };
+
+    const keyPayload = {
+      name: keyName,
+      translatedInTo: [translatePayload],
+    };
+
+    const newKey = await this.key
+      .findOneAndUpdate(q, keyPayload, options)
+      .then(async nk => {
+        await Promise.all(
+          curentProject[0].usedLocales
+            .filter(locale => locale !== truthfulLocale)
+            .map(
+              async locale =>
+                await this.localeService.updateProjectKeys({
+                  truthful: true,
+                  name: locale,
+                  ids: [nk._id],
+                }),
+            ),
+        );
+      });
+    return newKey;
+  }
 }

@@ -20,6 +20,7 @@ import { query, Response } from 'express';
 import { IKey } from './interfaces/key.interfaces';
 import { IProject } from './interfaces/project.interface';
 import { UpdateKeysDto } from './dto/update-keys.dto';
+import { UpdateKeyDto } from './dto/add-key.dto';
 
 @ApiTags('KeysMeta')
 @Controller('keysmeta')
@@ -33,37 +34,47 @@ export class KeysmetaController {
   async buildKeys(
     @Body(ValidationPipe) buildKeysDto: BuildKeysDto,
   ): Promise<IKeysMeta | INotifications> {
-    return await this.keysService.buildKeys(buildKeysDto);
+    const keyOrNotice = await this.keysService.buildKeys(buildKeysDto);
+    return keyOrNotice;
   }
 
   @Post('/update-keys')
   async updateKeys(
     @Body(ValidationPipe) updateKeysDto: UpdateKeysDto,
-  ): Promise<any> {
-    return await this.keysService.updateKeys(updateKeysDto);
+  ): Promise<INotifications> {
+    const res = await this.keysService.updateKeys(updateKeysDto);
+    return res;
   }
 
   @Get('/project-with-consumer')
-  async getProjectWConsumer(): Promise<IProject | INotifications> {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    //@ts-ignore
-    return await this.keysService.getProjecstWithConsumer();
+  async getProjectWConsumer(): Promise<IProject[] | INotifications> {
+    const res = await this.keysService.getProjecstWithConsumer();
+    return res;
   }
 
   @Get('/get-keys')
   async getKeys(
     @Query(ValidationPipe) getKeysDto: GetKeysDto,
   ): Promise<IKeysMeta | INotifications> {
-    return await this.keysService.getFilledKeysMeta(getKeysDto);
+    const res = await this.keysService.getFilledKeysMeta(getKeysDto);
+    return res;
   }
 
   @Get('/get-key-by-id')
   async getKeyById(
     @Query(ValidationPipe) query: GetKeyDto,
   ): Promise<IKey | INotifications> {
-    return await this.keysService.getKeyByid(query);
+    const res = await this.keysService.getKeyByid(query);
+    return res;
   }
 
+  @Post('/create-or-update-key')
+  async addKey(
+    @Body(ValidationPipe) updateKeyDto: UpdateKeyDto,
+  ): Promise<IKey> {
+    const key = this.keysService.updateOrCreateKey(updateKeyDto);
+    return key;
+  }
   // @Get('get-translated-file')
   // async getFile(
   //   @Query(ValidationPipe) getFileDto: GetFileDto,
