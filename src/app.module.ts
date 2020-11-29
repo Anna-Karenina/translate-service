@@ -8,6 +8,7 @@ import { GitlabModule } from './gitlab/gitlab.module';
 import { KeysmetaModule } from './keysmeta/keysmeta.module';
 import { TranslatorModule } from './translator/translator.module';
 import { FileModule } from './file/file.module';
+import { ServiceProviderModule } from './service-provider/service-provider.module';
 
 @Module({
   imports: [
@@ -16,12 +17,14 @@ import { FileModule } from './file/file.module';
       useNewUrlParser: true,
       useUnifiedTopology: true,
       useFindAndModify: false,
+      useCreateIndex: true,
     }),
     KeysmetaModule,
     LocalesModule,
     GitlabModule,
     TranslatorModule,
     FileModule,
+    ServiceProviderModule,
   ],
   controllers: [AppController],
   providers: [AppService],
