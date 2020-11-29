@@ -432,7 +432,7 @@ export class KeysmetaService {
     } = updateKeyDto;
 
     const curentProject = await this.getFilledProject({ consumer, project });
-    const truthfulLocale = curentProject[0].consumers[0].truthfulLocale;
+    const { truthfulLocale, keysMetaId } = curentProject[0].consumers[0];
 
     const translatePayload: ITranslatedInTo = {
       lang: truthfulLocale,
@@ -448,23 +448,41 @@ export class KeysmetaService {
       name: keyName,
       translatedInTo: [translatePayload],
     };
+    //@ts-ignore
 
-    const newKey = await this.key
-      .findOneAndUpdate(q, keyPayload, options)
-      .then(async nk => {
-        await Promise.all(
-          curentProject[0].usedLocales
-            .filter(locale => locale !== truthfulLocale)
-            .map(
-              async locale =>
-                await this.localeService.updateProjectKeys({
-                  truthful: true,
-                  name: locale,
-                  ids: [nk._id],
-                }),
-            ),
-        );
-      });
+    let newKey;
+    await this.key.findOneAndUpdate(q, keyPayload, options).then(async nk => {
+      newKey = nk;
+      await Promise.all(
+        curentProject[0].usedLocales
+          .filter(locale => locale !== truthfulLocale)
+          .map(
+            async locale =>
+              await this.localeService.updateProjectKeys({
+                truthful: true,
+                name: locale,
+                ids: [nk._id],
+              }),
+          ),
+      );
+    });
+
+    const { keysQuantity } = await this.keysMetaModel
+      .findById(keysMetaId)
+      .lean()
+      .exec();
+    await this.keysMetaModel.findByIdAndUpdate(
+      { _id: keysMetaId },
+      {
+        $addToSet: {
+          //@ts-ignore
+          keys: { _id: newKey._id, name: newKey.name },
+        },
+        $set: {
+          keysQuantity: keysQuantity + 1,
+        },
+      },
+    );
     return newKey;
   }
 }
