@@ -31,6 +31,7 @@ export class LocalesController {
   async getLocaleList(): Promise<ILocale[]> {
     return this.localesService.getAll();
   }
+
   @Get('/get-by-name')
   async getLocaleByName(
     @Query(ValidationPipe) query: GetLocaleDto,

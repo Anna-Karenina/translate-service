@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { INotifications } from 'src/global-interfaces/notifications.interface';
 import { AddServiceDto } from './dto/add-service.dto';
 import { IServiceProvider } from './interfaces/service-provider.interface';
 
@@ -10,6 +11,7 @@ export class ServiceProviderService {
     @InjectModel('ServiceProvider')
     private readonly serviceProviderModle: Model<IServiceProvider>,
   ) {}
+
   async createService(addServiceDto: AddServiceDto) {
     const {
       formatGroup,
@@ -27,5 +29,15 @@ export class ServiceProviderService {
     };
     const newService = await new this.serviceProviderModle(payload).save();
     return newService;
+  }
+
+  async getAll(): Promise<IServiceProvider[]> {
+    const list: IServiceProvider[] = await this.serviceProviderModle.find({});
+    return list;
+  }
+
+  async getById({ ID }): Promise<IServiceProvider> {
+    const serviceProvider = await this.serviceProviderModle.findById(ID).exec();
+    return serviceProvider;
   }
 }
