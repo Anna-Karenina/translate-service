@@ -15,7 +15,7 @@ export class TranslateRowByIdDto {
   project?: string;
 
   @IsOptional()
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Service wich use for translate',
   })
   serviceId?: string;
@@ -31,7 +31,7 @@ export class TranslateRowByIdHandleDto {
   lang: string;
 
   @IsOptional()
-  @ApiProperty({
+  @ApiPropertyOptional({
     description:
       'if you dont use any translate services, write translate handle',
   })
