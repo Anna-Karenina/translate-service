@@ -29,6 +29,7 @@ export class ServiceProviderService {
       ...(name && { name }),
       ...(url && { url }),
       ...(token && { token }),
+
     };
     const newService = await new this.serviceProviderModle(payload).save();
     return newService;
