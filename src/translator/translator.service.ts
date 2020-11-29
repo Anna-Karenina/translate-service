@@ -100,6 +100,7 @@ export class TranslatorService {
           Id: item,
           project: translateAllKeys.project,
           lang: translateAllKeys.lang,
+          serviceId: translateAllKeys.serviceId,
         });
       }
       console.log('Done!');
@@ -142,16 +143,13 @@ export class TranslatorService {
         break;
       case 'MyMemory':
         const parseText = from === 'ru' ? encodeURIComponent(text) : text;
-        const q = `?q=${parseText}&langpair=${from}|${to}`;
-        const myMemoryPayload = `${service.url}${q}`;
-
+        const query = `?q=${parseText}&langpair=${from}|${to}`;
+        const myMemoryPayload = `${service.url}${query}`;
         await this.myMemoryTranslate(myMemoryPayload).then(
           tr => (translatedString = tr),
         );
         break;
     }
-    // const url = this.configService.get<string>('TRANSLATE_SERVICE');
-    // const token = this.configService.get<string>('TRANSLATE_SERVICE_KEY');
 
     return translatedString;
   }
@@ -167,6 +165,8 @@ export class TranslatorService {
     const service = await this.serviceProviderService.getById({
       ID: serviceId,
     });
+    // TODO:  Для перевода всех строк сервис надо закешировать что бы на каждую итерацию не бегать в базу
+
     const curKey = await this.keyModel
       .findById(Id)
       .lean()
