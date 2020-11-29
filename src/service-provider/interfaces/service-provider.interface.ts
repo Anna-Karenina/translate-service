@@ -4,7 +4,7 @@ export interface IServiceProvider extends Document {
   name: string;
   url: string;
   token: {
-    secret_key: string;
+    secretKey: string;
     expireAt: string;
   };
   formatGroup: string;

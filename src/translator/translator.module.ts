@@ -6,6 +6,7 @@ import { FileModule } from 'src/file/file.module';
 import { LocalesModule } from 'src/locales/locales.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { KeySchema } from 'src/keysmeta/schema/key.schema';
+import { ServiceProviderModule } from 'src/service-provider/service-provider.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { KeySchema } from 'src/keysmeta/schema/key.schema';
     KeysmetaModule,
     FileModule,
     LocalesModule,
+    ServiceProviderModule,
   ],
   providers: [TranslatorService],
   controllers: [TranslatorController],

@@ -14,6 +14,13 @@ export class TranslateAllKeys {
     description: 'Project that uses in this translate',
   })
   project: string;
+
+  @IsNotEmpty()
+  @ApiProperty({
+    description: 'Id of translate service that you use for translate',
+  })
+  serviceId: string;
+
   @IsNotEmpty()
   @ApiProperty({
     description: `Consumer who use that keys. Can be one of ${Object.keys(

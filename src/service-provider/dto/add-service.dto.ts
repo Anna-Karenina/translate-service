@@ -1,4 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
+
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class AddServiceDto {
@@ -17,13 +18,13 @@ export class AddServiceDto {
   url: string;
 
   @IsOptional()
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '',
   })
-  secret_key?: string;
+  secretKey?: string;
 
   @IsOptional()
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: '',
   })
   secretKeyExpireAt?: string;
