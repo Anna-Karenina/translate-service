@@ -20,7 +20,7 @@ export class AddServiceDto {
   @ApiPropertyOptional({
     description: '',
   })
-  secret_key?: string;
+  secretKey?: string;
 
   @IsOptional()
   @ApiPropertyOptional({

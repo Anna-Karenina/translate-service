@@ -135,7 +135,7 @@ export class TranslatorService {
           to,
           text,
           ...(service.url && { url: service.url }),
-          ...(service.token.secret_key && { token: service.token.secret_key }),
+          ...(service.token.secretKey && { token: service.token.secretKey }),
         };
         await this.webtranTranslate(webtranPayload).then(
           tr => (translatedString = tr),

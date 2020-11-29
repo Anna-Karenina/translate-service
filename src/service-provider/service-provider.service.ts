@@ -18,14 +18,17 @@ export class ServiceProviderService {
       name,
       url,
       secretKeyExpireAt,
-      secret_key,
+      secretKey,
     } = addServiceDto;
+    const token = {
+      ...(secretKeyExpireAt && { expireAt: secretKeyExpireAt }),
+      ...(secretKey && { secretKey }),
+    };
     const payload = {
       ...(formatGroup && { formatGroup }),
       ...(name && { name }),
       ...(url && { url }),
-      ...(secretKeyExpireAt && { secretKeyExpireAt }),
-      ...(secret_key && { secret_key }),
+      ...(token && { token }),
     };
     const newService = await new this.serviceProviderModle(payload).save();
     return newService;
