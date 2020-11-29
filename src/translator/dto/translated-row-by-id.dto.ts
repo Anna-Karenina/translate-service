@@ -14,8 +14,8 @@ export class TranslateRowByIdDto {
   @ApiPropertyOptional()
   project?: string;
 
-  @IsOptional()
-  @ApiPropertyOptional({
+  @IsNotEmpty()
+  @ApiProperty({
     description: 'Service wich use for translate',
   })
   serviceId?: string;

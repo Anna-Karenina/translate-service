@@ -12,5 +12,6 @@ import { ServiceProviderController } from './service-provider.controller';
   ],
   providers: [ServiceProviderService],
   controllers: [ServiceProviderController],
+  exports: [ServiceProviderService],
 })
 export class ServiceProviderModule {}

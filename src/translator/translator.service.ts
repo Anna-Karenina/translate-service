@@ -12,13 +12,14 @@ import {
   TranslateRowByIdDto,
   TranslateRowByIdHandleDto,
 } from './dto/translated-row-by-id.dto';
-import { INotifications } from 'src/global-interfaces/notifications.interface';
 import { LocalesService } from 'src/locales/locales.service';
 import { ConfigService } from '@nestjs/config';
 import { map } from 'rxjs/operators';
-import { Model, Mongoose } from 'mongoose';
+import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { GetTranslatedRowDto } from './dto/get-translated-row.dto';
+import { ServiceProviderService } from 'src/service-provider/service-provider.service';
+import { IServiceProvider } from 'src/service-provider/interfaces/service-provider.interface';
 
 @Injectable()
 export class TranslatorService {
@@ -29,6 +30,7 @@ export class TranslatorService {
     private readonly configService: ConfigService,
     private readonly keysMeta: KeysmetaService,
     private readonly localesService: LocalesService,
+    private readonly serviceProviderService: ServiceProviderService,
   ) {}
 
   private buildJsonFromFile(lang, project): ITranslateJson {
@@ -38,6 +40,49 @@ export class TranslatorService {
 
     return parsedFile;
   }
+
+  private readonly myMemoryTranslate = async url => {
+    let translate;
+    try {
+      translate = await this.httpService
+        .get(url)
+        .pipe(map(async response => await response.data))
+        .toPromise();
+      return translate.responseData.translatedText;
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  private readonly webtranTranslate = async ({
+    from,
+    to,
+    text,
+    url,
+    token,
+  }) => {
+    const payload = {
+      text: text,
+      gfrom: from,
+      gto: to,
+      key: token,
+    };
+    const data = Object.entries(payload)
+      .map(([key, val]) => `${key}=${encodeURIComponent(val)}`)
+      .join('&');
+
+    let translate: string;
+    try {
+      translate = await this.httpService
+        .post(url, data)
+        .pipe(map(async response => await response.data))
+        .toPromise();
+      console.log(translate);
+      return translate;
+    } catch (error) {
+      console.log(`Error:${error}`);
+    }
+  };
 
   async tryTranslateAllKeys(translateAllKeys: TranslateAllKeys) {
     const curKeysMeta = await this.keysMeta.getKeysMeta({
@@ -80,44 +125,48 @@ export class TranslatorService {
     }
   }
 
-  async translateString({ from, to, text }) {
-    const url = this.configService.get<string>('TRANSLATE_SERVICE');
-    const token = this.configService.get<string>('TRANSLATE_SERVICE_KEY');
+  async translateString({ from, to, text }, service: IServiceProvider) {
+    let translatedString;
+    switch (service.name) {
+      case 'webtran':
+        const webtranPayload = {
+          from,
+          to,
+          text,
+          ...(service.url && { url: service.url }),
+          ...(service.token.secret_key && { token: service.token.secret_key }),
+        };
+        await this.webtranTranslate(webtranPayload).then(
+          tr => (translatedString = tr),
+        );
+        break;
+      case 'MyMemory':
+        const parseText = from === 'ru' ? encodeURIComponent(text) : text;
+        const q = `?q=${parseText}&langpair=${from}|${to}`;
+        const myMemoryPayload = `${service.url}${q}`;
 
-    const payload = {
-      text: text,
-      gfrom: from,
-      gto: to,
-      key: token,
-    };
-
-    const data = Object.entries(payload)
-      .map(([key, val]) => `${key}=${encodeURIComponent(val)}`)
-      .join('&');
-
-    let translate: string;
-    try {
-      translate = await this.httpService
-        .post(url, data)
-        .pipe(map(async response => await response.data))
-        .toPromise();
-      console.log(translate);
-    } catch (error) {
-      console.log(`Error:${error}`);
+        await this.myMemoryTranslate(myMemoryPayload).then(
+          tr => (translatedString = tr),
+        );
+        break;
     }
+    // const url = this.configService.get<string>('TRANSLATE_SERVICE');
+    // const token = this.configService.get<string>('TRANSLATE_SERVICE_KEY');
 
-    return translate;
+    return translatedString;
   }
 
   async translateKeyById(translatdRowById: TranslateRowByIdDto): Promise<IKey> {
     const { Id, lang, project, serviceId } = translatdRowById;
-    const url = this.configService.get<string>('TRANSLATE_SERVICE');
-    // TODO:   Прокинуть сервисы
+
     const isLangExist = await this.localesService.checkLocaleExist(lang);
     if (!isLangExist) {
       throw new Error(`that locales doest exist`);
     }
 
+    const service = await this.serviceProviderService.getById({
+      ID: serviceId,
+    });
     const curKey = await this.keyModel
       .findById(Id)
       .lean()
@@ -133,9 +182,11 @@ export class TranslatorService {
       to: lang,
       text: truthfultranslate,
     };
-    const translate = await this.translateString(payload);
+
+    const translate = await this.translateString(payload, service);
+
     const translator: ITranslatedInTo['translator'] = {
-      name: url,
+      name: service.name,
       role: 'machine',
     };
 
