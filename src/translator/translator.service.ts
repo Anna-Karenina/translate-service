@@ -8,13 +8,17 @@ import { FileService } from 'src/file/file.service';
 import { resolve } from 'path';
 import { IKeysMeta } from 'src/keysmeta/interfaces/keysmeta.interface';
 import { IKey, ITranslatedInTo } from 'src/keysmeta/interfaces/key.interfaces';
-import { GetTranslatedRowByIdDto } from './dto/get-translated-row-by-id.dto';
+import {
+  TranslateRowByIdDto,
+  TranslateRowByIdHandleDto,
+} from './dto/translated-row-by-id.dto';
 import { INotifications } from 'src/global-interfaces/notifications.interface';
 import { LocalesService } from 'src/locales/locales.service';
 import { ConfigService } from '@nestjs/config';
 import { map } from 'rxjs/operators';
-import { Model } from 'mongoose';
+import { Model, Mongoose } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
+import { GetTranslatedRowDto } from './dto/get-translated-row.dto';
 
 @Injectable()
 export class TranslatorService {
@@ -60,9 +64,9 @@ export class TranslatorService {
     return arrOfKeysIds;
   }
 
-  async getTranslateById(query: GetTranslatedRowByIdDto): Promise<IKey> {
+  async getTranslateById(query: GetTranslatedRowDto): Promise<IKey> {
     const { Id, lang } = query;
-    const key = await this.keysMeta.getKeyByid(Id);
+    const key = await this.keysMeta.getKeyByid({ Id });
     if (!lang) {
       //@ts-ignore
       return key;
@@ -105,14 +109,13 @@ export class TranslatorService {
     return translate;
   }
 
-  async translateKeyById(
-    translatedRowById: GetTranslatedRowByIdDto,
-  ): Promise<IKey | INotifications | any> {
-    const { Id, lang } = translatedRowById;
+  async translateKeyById(translatdRowById: TranslateRowByIdDto): Promise<IKey> {
+    const { Id, lang, project, serviceId } = translatdRowById;
     const url = this.configService.get<string>('TRANSLATE_SERVICE');
+    // TODO:   Прокинуть сервисы
     const isLangExist = await this.localesService.checkLocaleExist(lang);
     if (!isLangExist) {
-      return { status: 0, message: `that locales doest exist` };
+      throw new Error(`that locales doest exist`);
     }
 
     const curKey = await this.keyModel
@@ -131,7 +134,6 @@ export class TranslatorService {
       text: truthfultranslate,
     };
     const translate = await this.translateString(payload);
-
     const translator: ITranslatedInTo['translator'] = {
       name: url,
       role: 'machine',
@@ -144,9 +146,51 @@ export class TranslatorService {
       return k;
     });
 
-    const keyWithNewTranslate = await this.keyModel.findByIdAndUpdate(Id, {
-      $set: { translatedInTo: arr },
+    const keyWithNewTranslate = await this.keyModel.findByIdAndUpdate(
+      Id,
+      {
+        $set: { translatedInTo: arr },
+      },
+      { new: true },
+    );
+    return keyWithNewTranslate;
+  }
+
+  async translateKeyByIdHandle(
+    translateRowById: TranslateRowByIdHandleDto,
+  ): Promise<IKey> {
+    const { Id, lang, handleTranslate } = translateRowById;
+
+    const isLangExist = await this.localesService.checkLocaleExist(lang);
+    if (!isLangExist) {
+      throw new Error(`that locales doest exist`);
+    }
+
+    const curKey = await this.keyModel
+      .findById(Id)
+      .lean()
+      .exec();
+
+    const translate = handleTranslate;
+    const translator = {
+      name: 'some one',
+      role: 'User',
+    };
+
+    const newTranslatedInTo = curKey.translatedInTo.map(k => {
+      if (k.lang === lang) {
+        return { ...k, translator, translate };
+      }
+      return k;
     });
+
+    const keyWithNewTranslate = await this.keyModel.findByIdAndUpdate(
+      Id,
+      {
+        $set: { translatedInTo: newTranslatedInTo },
+      },
+      { new: true },
+    );
     return keyWithNewTranslate;
   }
 }
