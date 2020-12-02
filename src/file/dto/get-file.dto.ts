@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty } from 'class-validator';
-import { extensionEnum } from '../enums/extensions.enum';
+import { consumersEnum } from 'src/keysmeta/enums/consumers.enum';
 
 export class GetFileDto {
   @IsNotEmpty()
@@ -11,13 +11,13 @@ export class GetFileDto {
 
   @IsNotEmpty()
   @ApiProperty({
-    description: 'Language which one you need',
+    description: 'Consomer',
   })
-  lang: string;
+  consumer: consumersEnum;
 
   @IsNotEmpty()
   @ApiProperty({
-    description: 'extension of building file ',
+    description: 'Language which one you need',
   })
-  extension: extensionEnum;
+  lang: string;
 }

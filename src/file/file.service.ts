@@ -7,17 +7,18 @@ import { existsSync, mkdirSync, createWriteStream } from 'fs';
 import { InjectModel } from '@nestjs/mongoose';
 import { IKeysMeta } from 'src/keysmeta/interfaces/keysmeta.interface';
 import { Model } from 'mongoose';
-import { GetKeysDto } from 'src/keysmeta/dto/get-keys.dto';
-import { CreateLocaleDto } from 'src/locales/dto/create-locale.dto';
 import { GitlabService } from 'src/gitlab/gitlab.service';
-import { GetFileDto } from 'src/keysmeta/dto/get-file.dto';
+import { GetFileDto } from 'src/file/dto/get-file.dto';
 import { statSync } from 'fs';
+import { IProject } from 'src/keysmeta/interfaces/project.interface';
 
 @Injectable()
 export class FileService {
   constructor(
     @InjectModel('KeysMeta')
     private readonly keysMetaModel: Model<IKeysMeta>,
+    @InjectModel('Project')
+    private readonly projectModel: Model<IProject>,
     private readonly gitLabService: GitlabService,
     private readonly configService: ConfigService, // private readonly keysmetaService: KeysmetaService,
   ) {}
@@ -28,6 +29,31 @@ export class FileService {
     return ${code} })()`;
     return eval(str);
   };
+
+  // TODO:    забрать из кейсметасервиса сейчас циркулярка
+  async getFilledProject({
+    project,
+    consumer,
+  }): Promise<IProject[] | IProject> {
+    const curentProjects = await this.projectModel
+      .find({
+        projectName: project,
+      })
+      .exec();
+    if (!consumer) return curentProjects;
+
+    const filtered = [];
+    curentProjects.forEach((cp: IProject) => {
+      const findedConsumers = cp.consumers.find(
+        c => c.consumerType === consumer,
+      );
+      if (!findedConsumers) return;
+      //@ts-ignores
+      const filteredConsumers = { ...cp._doc, consumers: [findedConsumers] };
+      filtered.push(filteredConsumers);
+    });
+    return filtered[0];
+  }
 
   checkСonditions(project?: string): string {
     const localeFolderName = this.configService.get<string>('TRANSLATE_FOLDER');
@@ -90,52 +116,70 @@ export class FileService {
   //   return stream;
   // };
 
-  // async buildJavaScriptFile(getFileDto: GetFileDto) {
-  //   const { project, lang } = getFileDto;
-  //   const keys = await this.keysMetaModel
-  //     .findOne({ project })
-  //     .populate('keys')
-  //     .exec();
-  //   const path = this.checkСonditions(project);
-  //   const filePath = resolve(path, `${lang}.${keys.extension}`);
+  async buildJavaScriptFile({
+    consumer,
+    project,
+    lang,
+    keysMetaId,
+    fileExtension,
+  }) {
+    const { keys } = await this.keysMetaModel
+      .findById(keysMetaId)
+      .populate('keys.key')
+      .exec();
 
-  //   await new Promise((resolve, reject) => {
-  //     const writeble = createWriteStream(filePath);
-  //     writeble.write(`export const ${lang} = {\n`);
+    const path = this.checkСonditions(project);
+    const filePath = resolve(path, `${lang}.${fileExtension}`);
 
-  //     keys.keys.reduce((acc: any, key) => {
-  //       //@ts-ignore
-  //       const currentTranslate = key.translatedInTo.find(k => k.lang === lang);
-  //       const a = [key.name];
-  //       const str = writeble.write(
-  //         `${a}: "${currentTranslate.translate
-  //           .replace(/[\s{2,}]+/g, ' ')
-  //           .replace(/"/g, ' ')
-  //           .trim()}",\n`,
-  //       );
-  //       acc = { ...acc, str };
-  //       return acc;
-  //     }, {});
-  //     writeble.write(`};`);
-  //     writeble.end();
-  //     writeble.on('finish', () => {
-  //       resolve(true);
-  //     });
-  //     writeble.on('error', reject);
-  //   });
+    await new Promise((resolve, reject) => {
+      const writeble = createWriteStream(filePath);
+      writeble.write(`export const ${lang} = {\n`);
+      console.log(keys);
+      keys.reduce((acc: any, { key }) => {
+        if (!key) return acc;
+        //@ts-ignore
+        const currentTranslate = key.translatedInTo.find(k => k.lang === lang);
+        if (!currentTranslate) return acc;
 
-  //   return filePath;
-  // }
+        const str = writeble.write(
+          //@ts-ignore
+
+          `${key.name}: "${currentTranslate.translate
+            .replace(/[\s{2,}]+/g, ' ')
+            .replace(/"/g, ' ')
+            .trim()}",\n`,
+        );
+        acc = { ...acc, str };
+        return acc;
+      }, {});
+      writeble.write(`};`);
+      writeble.end();
+      writeble.on('finish', () => {
+        resolve(true);
+      });
+      writeble.on('error', reject);
+    });
+
+    return filePath;
+  }
   // async buildJSONFile(getFileDto: GetFileDto){}
 
   // async buildIniFile(getFileDto: GetFileDto){}
 
   async buildFileByProjectName(getFileDto: GetFileDto): Promise<any> {
-    const { extension } = getFileDto;
+    const { consumer, project } = getFileDto;
+    const prj = await this.getFilledProject({ consumer, project });
+    //@ts-ignore
+    const { fileExtension, keysMetaId } = prj.consumers[0];
+    const payload = {
+      keysMetaId,
+      fileExtension,
+      ...getFileDto,
+    };
     let filePath: string;
-    switch (extension) {
+    switch (fileExtension) {
       case 'js':
-      // return (filePath = await this.buildJavaScriptFile(getFileDto));
+        return (filePath = await this.buildJavaScriptFile(payload));
       case 'ts':
       // return (filePath = await this.buildJavaScriptFile(getFileDto));
       // case "ini":

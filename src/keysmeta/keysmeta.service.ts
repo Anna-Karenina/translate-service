@@ -40,7 +40,8 @@ export class KeysmetaService {
 
   async checkProjectExist({ project, consumer }): Promise<boolean> {
     if (!consumer) {
-      return await this.projectModel.exists({ projectName: project });
+      const proj = await this.projectModel.exists({ projectName: project });
+      return proj;
     }
 
     const curentProjects = await this.projectModel
