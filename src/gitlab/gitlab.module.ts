@@ -1,6 +1,8 @@
 import { HttpModule, Module } from '@nestjs/common';
 import { GitlabService } from './gitlab.service';
 import { GitlabController } from './gitlab.controller';
+import { MongooseModule } from '@nestjs/mongoose';
+import { ProjectSchema } from 'src/keysmeta/schema/project.schema';
 
 @Module({
   imports: [
@@ -10,6 +12,7 @@ import { GitlabController } from './gitlab.controller';
         maxRedirects: 5,
       }),
     }),
+    MongooseModule.forFeature([{ name: 'Project', schema: ProjectSchema }]),
   ],
   providers: [GitlabService],
   controllers: [GitlabController],

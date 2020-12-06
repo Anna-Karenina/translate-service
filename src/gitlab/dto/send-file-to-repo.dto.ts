@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty } from 'class-validator';
 import { consumersEnum } from 'src/keysmeta/enums/consumers.enum';
 
-export class TranslateAllKeys {
+export class SendFileToRepositoryDto {
   @IsNotEmpty()
   @ApiProperty({
     description: 'Lang than need to translate',
@@ -14,12 +14,6 @@ export class TranslateAllKeys {
     description: 'Project that uses in this translate',
   })
   project: string;
-
-  @IsNotEmpty()
-  @ApiProperty({
-    description: 'Id of translate service that you use for translate',
-  })
-  serviceId: string;
 
   @IsNotEmpty()
   @ApiProperty({
