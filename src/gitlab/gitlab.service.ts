@@ -110,7 +110,7 @@ export class GitlabService {
         c => c.consumerType === consumer,
       );
       if (!findedConsumers) return;
-      //@ts-ignores
+      //@ts-ignore
       const filteredConsumers = { ...cp._doc, consumers: [findedConsumers] };
       filtered.push(filteredConsumers);
     });
